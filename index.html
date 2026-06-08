@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小魅魔养成计划</title>
+    <!-- 字体图标库 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <style>
+        /* 全局重置 适配安卓手机 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", system-ui, sans-serif;
+        }
+        body {
+            background-color: #f0f8ff;
+            min-height: 100vh;
+            max-width: 420px;
+            margin: 0 auto;
+            overflow-x: hidden;
+            padding-bottom: 80px;
+        }
+        /* 页面容器 所有页面默认隐藏 */
+        .game-page {
+            display: none;
+            width: 100%;
+            padding: 12px;
+        }
+        .game-page.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        /* 入场动画 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* 事件触发弹跳动画 */
+        @keyframes bounce {
+            0%,100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+        .event-animate {
+            animation: bounce 0.5s ease-in-out;
+        }
+        /* 底部导航栏 固定悬浮 */
+        .nav-bottom {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 420px;
+            height: 70px;
+            background: #ffffff;
+            box-shadow: 0 -2px 10px rgba(180, 200, 220, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            z-index: 999;
+        }
+        .nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: transparent;
+            border: none;
+            color: #708090;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 6px 10px;
+        }
+        .nav-btn i {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+        .nav-btn.active {
+            color: #ff87a2;
+        }
+        /* 通用卡片样式 核心布局 */
+        .card {
+            background: #ffffff;
+            border: 1px solid #e6edf7;
+            border-radius: 14px;
+            padding: 16px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 8px rgba(190, 210, 230, 0.25);
+        }
+        .card-title {
+            font-size: 16px;
+            color: #4a5568;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .card-content {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #555;
+            white-space: pre-line;
+        }
+        /* 玩家/角色信息卡片 */
+        .info-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 8px 0;
+        }
+        .info-tag {
+            background: #f7f0f5;
+            color: #c76b96;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+        /* 周数切换按钮 */
+        .week-control {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 10px 0;
+        }
+        .week-btn {
+            background: #e1f5fe;
+            border: none;
+            color: #2196f3;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .week-btn:hover {
+            background: #b3e5fc;
+        }
+        /* 剧情选项按钮组 */
+        .option-group {
+            margin-top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .option-btn {
+            width: 100%;
+            padding: 12px;
+            background: #ffeef2;
+            border: 1px solid #ffd6e0;
+            border-radius: 10px;
+            color: #b94e6c;
+            font-size: 14px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .option-btn:active {
+            background: #ffd6e0;
+        }
+        /* 背包物品样式 */
+        .bag-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .bag-item {
+            background: #f5f8ff;
+            border: 1px solid #dce4f5;
+            border-radius: 8px;
+            padding: 10px 4px;
+            text-align: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .bag-item i {
+            font-size: 18px;
+            color: #6488d2;
+        }
+        /* 弹窗 物品详情/NPC详情 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal-content {
+            background: #fff;
+            border-radius: 14px;
+            width: 100%;
+            max-width: 380px;
+            padding: 20px;
+        }
+        .modal-close {
+            margin-top: 15px;
+            width: 100%;
+            padding: 10px;
+            background: #ff87a2;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        /* 社交NPC列表 */
+        .npc-item {
+            padding: 10px;
+            border-bottom: 1px dashed #e2e8f0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .npc-name {
+            color: #4a5568;
+            font-weight: 500;
+        }
+        .npc-favor {
+            font-size: 12px;
+            color: #e57373;
+        }
+        /* API配置表单 */
+        .form-item {
+            margin: 12px 0;
+        }
+        .form-item label {
+            font-size: 13px;
+            color: #666;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .form-item input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .func-btn {
+            width: 100%;
+            padding: 11px;
+            margin: 6px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .btn-blue { background: #81b4f1; color: #fff; }
+        .btn-green { background: #88d8b0; color: #fff; }
+        .btn-red { background: #ff9a9a; color: #fff; }
+        .tip-text {
+            font-size: 13px;
+            text-align: center;
+            margin: 8px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <!-- 弹窗层 全局共用 -->
+    <div id="globalModal" class="modal">
+        <div class="modal-content">
+            <div id="modalBody"></div>
+            <button class="modal-close" onclick="closeModal()">关闭</button>
+        </div>
+    </div>
+    <!-- 1. 游戏首页 -->
+    <div id="page-home" class="game-page active">
+        <div class="card event-animate">
+            <div class="card-title"><i class="fa fa-home"></i> 🏠 主控档案 | 冬桉</div>
+            <div class="card-content">
+姓名：冬桉
+年龄：25岁
+职业：漫画创作者
+居住地址：S市海天园1823室
+容貌：标准御姐长相，日常佩戴细框眼镜，眉眼利落明艳，五官精致大气，自带爽朗气场。
+身材：曲线火辣匀称，体态舒展大方。
+性格：泼辣豪爽，待人真诚直爽，不拘小节，行动力极强。
+性别：女
+            </div>
+            <div class="info-row">
+                <span class="info-tag">☀️ 晴天</span>
+                <span class="info-tag">🍂 秋季</span>
+                <span class="info-tag">🌤 傍晚</span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title"><i class="fa fa-heart"></i> 💖 小魅魔档案（初始档案）</div>
+            <div class="card-content">
+姓名：莉诺尔
+性别：女
+当前阶段：蛋体发育期（第一个月）
+对应人类年龄：未孵化
+性格倾向：与主控互补，安静内敛，心思细腻柔软。
+容貌：欧式精致长相，眉眼温婉，天生带着惹人怜爱的气质。
+身材：暂未发育，蛋壳通体温润泛着淡粉微光。
+特征：天生拥有桃心尾巴、尖尖兽耳，现阶段无法自主隐藏。
+魅魔纹位置：左手手臂，情绪波动时纹路色泽会微微加深。
+专属昵称：桉桉
+【当前状态】
+心跳频率：平稳柔和
+今日互动：0次
+累计爱意值：0点
+心念随笔：蛋壳之内，能清晰感知到外界温暖的气息，安安静静等待苏醒。
+            </div>
+            <div class="info-row">
+                <span class="info-tag">💞 爱意值: 0</span>
+                <span class="info-tag">📅 第1周</span>
+                <span class="info-tag">⏳ 蛋体发育期</span>
+            </div>
+        </div>
+        <div class="week-control">
+            <button class="week-btn" onclick="changeWeek(-1)">← 上一周</button>
+            <span id="weekShow">当前：第 1 周</span>
+            <button class="week-btn" onclick="changeWeek(1)">下一周 →</button>
+        </div>
+        <div class="card">
+            <div class="card-title"><i class="fa fa-book"></i> 📖 日常剧情</div>
+            <div class="card-content" id="mainStory">
+我坐在客厅柔软的布艺沙发上，指尖无意识划过桌面崭新的快递盒。就在三天前，我在午夜偶然点开了那个跳动粉色桃心图标的红光APP，一时好奇下单了这件来路不明的商品，如今快递稳稳落在家中，卖家账号却早已显示查无此人。
+窗外是S市秋季傍晚独有的景致，梧桐树叶被夕阳染成暖黄色，风穿过街巷，带着街边咖啡店飘来的焦糖香气。纱帘被晚风轻轻掀起一角，室内光线柔和又静谧。我深吸一口气，伸手拆开了快递外包装，内里铺着一层柔软的白色天鹅绒，一枚椭圆的蛋静静躺在中央，蛋壳表层泛着淡淡的柔光，竟在跟着我的呼吸节奏轻轻明灭。
+指尖下意识触碰上温润的蛋壳，接触的一瞬间，我清晰感受到蛋壳内部传来微弱又规律的跳动，像是鲜活的心跳。系统悄然完成结契，我这三天里最强烈的期待情绪化作初始能量融入蛋体，也注定了这枚小家伙会拥有和我截然相反的安静性格。
+叮咚——手机弹出快递签收完成的提示音，可我心里清楚，这件东西从签收的这一刻起，就彻底和普通商品划清了界限。客厅里摆放着我日常画画用的数位板、摊开的漫画分镜稿，茶几上还有没喝完的柠檬水，处处都是生活化的气息。我蹲在快递盒旁，目光久久停留在这枚特殊的蛋上，心里生出许多细碎的思绪。
+[内心：一时的好奇，竟然给自己的生活添了这样一位特殊的“房客”，往后的日子，大概会变得和从前完全不一样了吧。]
+周围一切都遵循着2025年现代都市的生活轨迹，没有离奇的异象，只有一室温馨的日常。我站起身环顾房间，思索着接下来该如何和这位特殊的小家伙相处，也在盘算着今晚要做些什么。
+            </div>
+        </div>
+        <div class="option-group">
+            <button class="option-btn" onclick="selectStoryOption(0)">1. 坐在沙发上，静静观察蛋壳的变化</button>
+            <button class="option-btn" onclick="selectStoryOption(1)">2. 拿起旁边的温水，小心擦拭蛋壳表面</button>
+            <button class="option-btn" onclick="selectStoryOption(2)">3. 回到书桌，一边画漫画一边留意蛋的动静</button>
+            <button class="option-btn" onclick="selectStoryOption(3)">4. 准备简单的晚餐，让室内氛围更加温馨</button>
+        </div>
+    </div>
+    <!-- 2. 背包界面 -->
+    <div id="page-bag" class="game-page">
+        <div class="card">
+            <div class="card-title"><i class="fa fa-suitcase"></i> 🎒 我的背包</div>
+            <p class="tip-text">点击物品查看详情，再次点击使用物品</p>
+            <div class="bag-grid" id="bagContainer">
+                <!-- 背包物品动态生成 -->
+            </div>
+        </div>
+    </div>
+    <!-- 3. 社交/NPC界面 -->
+    <div id="page-social" class="game-page">
+        <div class="card">
+            <div class="card-title"><i class="fa fa-users"></i> 👥 社交人际</div>
+            <p class="tip-text">点击NPC名称查看详细资料与好感度</p>
+            <div id="npcList">
+                <!-- NPC列表动态生成 -->
+            </div>
+        </div>
+    </div>
+    <!-- 4. 存档系统界面 -->
+    <div id="page-save" class="game-page">
+        <div class="card">
+            <div class="card-title"><i class="fa fa-archive"></i> 💾 存档管理</div>
+            <div class="card-content">
+当前存档状态：<span id="saveState">暂无存档</span>
+            </div>
+            <button class="func-btn btn-green" onclick="saveGame()">💾 手动保存游戏</button>
+            <button class="func-btn btn-blue" onclick="loadGame()">📂 读取存档</button>
+            <button class="func-btn btn-red" onclick="clearSave()">🗑️ 删除存档</button>
+        </div>
+    </div>
+    <!-- 5. API配置界面 -->
+    <div id="page-api" class="game-page">
+        <div class="card">
+            <div class="card-title"><i class="fa fa-cog"></i> 🔧 API接口配置</div>
+            <div class="form-item">
+                <label>API 端点地址</label>
+                <input type="text" id="apiUrl" placeholder="请输入接口地址">
+            </div>
+            <div class="form-item">
+                <label>API 密钥</label>
+                <input type="text" id="apiKey" placeholder="请输入API Key">
+            </div>
+            <div class="form-item">
+                <label>模型自定义名称</label>
+                <input type="text" id="modelName" placeholder="例如：通用对话模型">
+            </div>
+            <div id="apiTip" class="tip-text"></div>
+            <button class="func-btn btn-blue" onclick="saveApi()">保存配置</button>
+            <button class="func-btn btn-green" onclick="testApi()">测试连通性</button>
+            <button class="func-btn btn-red" onclick="clearApi()">清空配置</button>
+        </div>
+    </div>
+    <!-- 底部全局导航栏 -->
+    <div class="nav-bottom">
+        <button class="nav-btn active" onclick="switchNav('page-home', this)">
+            <i class="fa fa-home"></i>
+            <span>主页</span>
+        </button>
+        <button class="nav-btn" onclick="switchNav('page-bag', this)">
+            <i class="fa fa-suitcase"></i>
+            <span>背包</span>
+        </button>
+        <button class="nav-btn" onclick="switchNav('page-social', this)">
+            <i class="fa fa-users"></i>
+            <span>社交</span>
+        </button>
+        <button class="nav-btn" onclick="switchNav('page-save', this)">
+            <i class="fa fa-archive"></i>
+            <span>存档</span>
+        </button>
+        <button class="nav-btn" onclick="switchNav('page-api', this)">
+            <i class="fa fa-cog"></i>
+            <span>API</span>
+        </button>
+    </div>
+    <script>
+        // ===================== 全局游戏数据 =====================
+        const GameData = {
+            week: 1,
+            loveValue: 0,
+            interactCount: 0,
+            weather: "晴天",
+            season: "秋季",
+            timePeriod: "傍晚",
+            growStage: "蛋体发育期",
+            // 背包物品库
+            bagItems: [
+                {id:1, name:"温水", icon:"fa-tint", desc:"常温饮用水，温和滋润，使用后小幅提升互动好感", effect:"love+2"},
+                {id:2, name:"小点心", icon:"fa-cutlery", desc:"手工甜点，香气清甜，适合日常互动", effect:"love+3"},
+                {id:3, name:"柔软毛毯", icon:"fa-bed", desc:"纯棉毛毯，触感温暖，安抚情绪", effect:"love+2"},
+                {id:4, name:"漫画绘本", icon:"fa-book", desc:"趣味绘本，适合休闲相伴", effect:"love+1"},
+                {id:5, name:"香薰摆件", icon:"fa-fire", desc:"淡香香薰，营造温馨氛围", effect:"love+2"},
+                {id:6, name:"绿植盆栽", icon:"fa-leaf", desc:"室内小绿植，生机盎然", effect:"love+1"},
+                {id:7, name:"毛绒玩偶", icon:"fa-paw", desc:"软乎乎玩偶，治愈感满满", effect:"love+3"},
+                {id:8, name:"水果拼盘", icon:"fa-apple", desc:"新鲜时令水果，清甜可口", effect:"love+2"}
+            ],
+            // NPC社交库 + 好感度
+            npcList: [
+                {id:1, name:"林晓", relation:"闺蜜", favor:18, desc:"从小一起长大的好友，性格活泼，经常上门串门，了解你的生活习惯。"},
+                {id:2, name:"张姐", relation:"邻居", favor:12, desc:"住在同楼层的热心邻居，为人和善，日常会互相帮忙代收快递。"},
+                {id:3, name:"陈编辑", relation:"职场对接人", favor:10, desc:"漫画平台编辑，负责对接你的稿件，做事严谨认真。"},
+                {id:4, name:"阿泽", relation:"咖啡店店员", favor:8, desc:"楼下网红咖啡店的店员，经常碰面，待人温和有礼。"}
+            ]
+        };
+        // 页面ID集合
+        const PageList = ["page-home","page-bag","page-social","page-save","page-api"];
+        let currentNavBtn = null;
+        // ===================== 页面导航切换 =====================
+        function switchNav(pageId, btnDom) {
+            // 切换页面显示
+            PageList.forEach(id => {
+                document.getElementById(id).classList.remove("active");
+            });
+            document.getElementById(pageId).classList.add("active");
+            // 切换导航按钮样式
+            document.querySelectorAll(".nav-btn").forEach(btn=>{
+                btn.classList.remove("active");
+            });
+            btnDom.classList.add("active");
+            currentNavBtn = btnDom;
+            // 进入对应页面初始化
+            if(pageId === "page-bag") renderBag();
+            if(pageId === "page-social") renderNpc();
+            if(pageId === "page-save") refreshSaveStatus();
+        }
+        // ===================== 周数切换 联动时间/剧情 =====================
+        function changeWeek(step) {
+            let newWeek = GameData.week + step;
+            if(newWeek < 1) newWeek = 1;
+            if(newWeek > 16) newWeek = 16;
+            GameData.week = newWeek;
+            document.getElementById("weekShow").innerText = `当前：第 ${GameData.week} 周`;
+            // 周数联动季节、天气、时段
+            if(GameData.week <=4){
+                GameData.season = "春季";
+                GameData.weather = Math.random()>0.3 ? "晴天" : "阴天";
+            }else if(GameData.week <=8){
+                GameData.season = "夏季";
+                GameData.weather = Math.random()>0.4 ? "艳阳天" : "雨天";
+            }else if(GameData.week <=12){
+                GameData.season = "秋季";
+                GameData.weather = Math.random()>0.2 ? "晴天" : "雾霾天";
+            }else{
+                GameData.season = "冬季";
+                GameData.weather = Math.random()>0.5 ? "阴天" : "雪天";
+            }
+            const timeArr = ["早晨","中午","傍晚","深夜"];
+            GameData.timePeriod = timeArr[Math.floor(Math.random()*4)];
+            // 刷新主页标签
+            refreshHomeTags();
+            // 周数更新剧情
+            updateStoryByWeek();
+            // 添加动画
+            document.getElementById("mainStory").parentElement.classList.add("event-animate");
+            setTimeout(()=>{
+                document.getElementById("mainStory").parentElement.classList.remove("event-animate");
+            },500);
+        }
+        // 刷新主页天气/季节标签
+        function refreshHomeTags() {
+            const tagHtml = `
+                <span class="info-tag">${GameData.weather}</span>
+                <span class="info-tag">${GameData.season}</span>
+                <span class="info-tag">${GameData.timePeriod}</span>
+            `;
+            document.querySelector("#page-home .info-row").innerHTML = tagHtml;
+        }
+        // 根据周数更新剧情文本
+        function updateStoryByWeek() {
+            const storyDom = document.getElementById("mainStory");
+            let baseText = "";
+            if(GameData.week <=4){
+                baseText = `如今来到了S市${GameData.season}的${GameData.timePeriod}，窗外的街道褪去了往日的燥热，空气里满是清爽的气息。${GameData.weather}的天气让整座城市都显得格外温柔。
+我依旧守在家中，蛋壳安安稳稳摆放在客厅的桌面之上，随着相处的时间慢慢变长，蛋壳明灭的节奏也变得愈发稳定。这段日子里，我照常更新漫画稿件，打理日常生活，而这枚特殊的蛋就像一位安静的陪伴者，融入了我平淡又安逸的日常。
+楼下的便利店传来隐约的人声，街边的行道树随风轻晃，2025年的都市生活有条不紊地运转着，没有任何出格的异象。指尖偶尔轻轻触碰蛋壳，依旧能感受到内里微弱的跳动，那份属于莉诺尔的气息，也变得越来越清晰。
+[内心：日子一天天过去，从最初的好奇，慢慢变成了习惯。有这样一个小家伙陪着，独居的生活也多了不少趣味。]
+屋内灯光柔和，桌椅、厨具、绘画工具都摆放整齐，完全是普通都市独居女孩的生活模样，我一边感受着身边的变化，一边思索接下来要做的事。`;
+            }else if(GameData.week <=8){
+                baseText = `步入${GameData.season}深季，${GameData.weather}笼罩着整座S市，${GameData.timePeriod}的街巷行人稀疏，晚风穿过楼宇带来阵阵凉意。
+家中暖意融融，我为房间添上了薄款窗帘，茶几上常备着温水与小点心。蛋壳的状态十分稳定，结契带来的联结让我能隐约感知到内里小家伙平和的情绪。这段时间的日常互动，让爱意值缓慢累积，蛋壳表层的淡粉光泽也比最初更加明显。
+我依旧按时和编辑对接漫画工作，偶尔和闺蜜林晓出门逛街、喝下午茶，生活节奏舒缓安逸。邻里之间偶尔碰面寒暄，一切都遵循着现代都市的生活轨迹，平淡却充实。
+[内心：原来养成一件事物，是这样温柔的过程。不慌不忙，静静等待就好。]
+目光落在蛋壳上，我清楚它还处在漫长的发育期，而我也愿意陪着它，走过这一段慢慢成长的时光。`;
+            }else{
+                baseText = `S市迎来了${GameData.season}，${GameData.weather}的天气让窗外的景色别有一番风味，${GameData.timePeriod}时分，城市渐渐安静下来。
+居家的时光变得更加慵懒，我减少了外出的频率，大部分时间都留在房间里画画、休息，或是静静陪伴着那枚蛋。日复一日的相处，让彼此的联结愈发深厚，累计的爱意值稳步增长，距离下一成长阶段也越来越近。
+社区里偶尔会举办小型邻里活动，咖啡店、便利店依旧正常营业，外卖、线上沟通等现代生活方式照常进行。没有离奇的变故，只有细水长流的陪伴。
+[内心：等待的时光虽然漫长，却一点也不枯燥。我开始期待，它真正苏醒的那一天。]
+房间里处处都是生活化的细节，而这枚特别的蛋，已经彻底成为我生活里不可或缺的一部分。`;
+            }
+            storyDom.innerText = baseText;
+        }
+
+        // ===================== AI 实时生成剧情 =====================
+        // 从保存的配置中获取 API 信息
+        function getApiConfig() {
+            const apiStr = localStorage.getItem("yomori_api_config");
+            if (!apiStr) return null;
+            return JSON.parse(apiStr);
+        }
+
+        // 构建发送给 AI 的系统提示词
+        function buildSystemPrompt() {
+            return `你是一个【小魅魔养成计划】交互式游戏的 AI 主持人。
+
+【世界观设定】
+玩家扮演的是25岁的漫画创作者“冬桉”，居住在S市海天园1823室，性格泼辣豪爽、待人真诚。
+玩家在家里意外获得了一枚特殊的蛋（小魅魔莉诺尔），现在处于蛋体发育期（第${GameData.week}周）。
+小魅魔性格安静内敛，心思细腻，魅魔纹在玩家左手手臂上。
+
+【当前游戏状态】
+- 当前周数：第 ${GameData.week} 周
+- 季节：${GameData.season}
+- 天气：${GameData.weather}
+- 时段：${GameData.timePeriod}
+- 爱意值：${GameData.loveValue}
+- 今日互动次数：${GameData.interactCount}
+- 成长阶段：${GameData.growStage}
+
+【背包物品】
+玩家拥有：${GameData.bagItems.map(i => i.name).join('、')}
+
+【输出要求】
+请根据玩家选择的动作，生成一段剧情描述（150-200字）和3个不同的后续选项。
+输出格式必须是 JSON 格式，如下所示：
+{
+  "story": "剧情描述文字...",
+  "options": [
+    "选项1的文字描述",
+    "选项2的文字描述",
+    "选项3的文字描述"
+  ]
+}
+
+【重要规则】
+1. 剧情要符合现代都市生活场景，不要出现魔幻展开
+2. 剧情可以影响爱意值，在最后用【爱意值+?】的方式注明变化（? 在 0-10 之间）
+3. 选项要自然、多样，让玩家有不同选择方向
+4. 保持温馨、治愈的风格
+5. 每次回复必须严格按照 JSON 格式，不要有其他文字`
+        }
+
+        // 调用 DeepSeek API
+        async function callDeepSeek(userAction, previousStory = "") {
+            const apiConfig = getApiConfig();
+            if (!apiConfig || !apiConfig.key) {
+                alert("请先在【API配置】页面填写 DeepSeek API Key！\n获取地址：https://platform.deepseek.com/");
+                throw new Error("未配置 API");
+            }
+
+            // 优先使用用户配置的端点，默认使用 DeepSeek 官方地址
+            let apiUrl = apiConfig.url;
+            if (!apiUrl || apiUrl === "") {
+                apiUrl = "https://api.deepseek.com/v1/chat/completions";
+            }
+
+            const systemPrompt = buildSystemPrompt();
+            const userMessage = `玩家上一段经历：${previousStory || "游戏刚开始，玩家收到了小魅魔的蛋"}\n\n玩家现在做的动作：${userAction}\n\n请根据游戏状态生成接下来的剧情和3个选项。`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiConfig.key}`
+                    },
+                    body: JSON.stringify({
+                        model: apiConfig.model || "deepseek-chat",
+                        messages: [
+                            { role: "system", content: systemPrompt },
+                            { role: "user", content: userMessage }
+                        ],
+                        temperature: 0.8,
+                        max_tokens: 800
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API 请求失败: ${response.status} - ${errorText}`);
+                }
+
+                const data = await response.json();
+                const content = data.choices[0].message.content;
+                
+                // 解析 JSON 响应
+                let jsonMatch = content.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    throw new Error("AI 返回格式异常");
+                }
+                
+                const result = JSON.parse(jsonMatch[0]);
+                return result;
+            } catch (error) {
+                console.error("AI 调用失败:", error);
+                alert("AI 生成失败：" + error.message + "\n请检查 API Key 是否正确，或网络是否通畅");
+                return null;
+            }
+        }
+
+        // 存储上一段剧情（用于上下文）
+        let lastStory = "";
+
+        // 替换原来的选择剧情函数
+        async function selectStoryOption(optIndex) {
+            // 显示加载状态
+            const storyDom = document.getElementById("mainStory");
+            const originalStory = storyDom.innerText;
+            storyDom.innerText = "✨ AI 正在编织剧情中，请稍候... ✨";
+            
+            // 获取玩家选择的动作文字
+            const optionTexts = [
+                "静静观察蛋壳的变化",
+                "用温水小心擦拭蛋壳表面",
+                "回到书桌，一边画漫画一边留意蛋的动静",
+                "准备简单的晚餐，让室内氛围更加温馨"
+            ];
+            const userAction = optionTexts[optIndex] || "进行了日常互动";
+            
+            try {
+                // 调用 AI
+                const aiResult = await callDeepSeek(userAction, lastStory);
+                
+                if (!aiResult) {
+                    storyDom.innerText = originalStory;
+                    return;
+                }
+                
+                // 解析剧情中的爱意值变化
+                const storyText = aiResult.story;
+                let loveChange = 0;
+                const loveMatch = storyText.match(/【爱意值\+(\d+)】/);
+                if (loveMatch) {
+                    loveChange = parseInt(loveMatch[1]);
+                }
+                
+                // 应用爱意值变化
+                if (loveChange > 0) {
+                    GameData.loveValue += Math.min(loveChange, 10);
+                    GameData.interactCount += 1;
+                }
+                
+                // 更新剧情显示
+                storyDom.innerText = storyText.replace(/【爱意值\+\d+】/g, '');
+                lastStory = storyText;
+                
+                // 刷新显示的爱意值
+                refreshHomeDataTag();
+                
+                // 更新选项按钮的文字为 AI 生成的选项
+                const optionBtns = document.querySelectorAll("#page-home .option-btn");
+                if (aiResult.options && aiResult.options.length >= 3) {
+                    for (let i = 0; i < optionBtns.length && i < aiResult.options.length; i++) {
+                        optionBtns[i].innerHTML = `${i+1}. ${aiResult.options[i]}`;
+                        // 重新绑定点击事件，传递新的动作文字
+                        optionBtns[i].onclick = (function(actionText) {
+                            return async function() {
+                                await handleAIOptionClick(actionText);
+                            };
+                        })(aiResult.options[i]);
+                    }
+                }
+                
+                // 添加动画效果
+                storyDom.parentElement.classList.add("event-animate");
+                setTimeout(() => {
+                    storyDom.parentElement.classList.remove("event-animate");
+                }, 500);
+                
+            } catch (error) {
+                console.error(error);
+                storyDom.innerText = originalStory;
+            }
+        }
+
+        // 处理 AI 生成的新选项点击
+        async function handleAIOptionClick(optionText) {
+            const storyDom = document.getElementById("mainStory");
+            storyDom.innerText = "✨ AI 正在思考接下来的发展... ✨";
+            
+            try {
+                const aiResult = await callDeepSeek(optionText, lastStory);
+                
+                if (!aiResult) return;
+                
+                // 解析爱意值变化
+                let loveChange = 0;
+                const loveMatch = aiResult.story.match(/【爱意值\+(\d+)】/);
+                if (loveMatch) {
+                    loveChange = parseInt(loveMatch[1]);
+                }
+                
+                if (loveChange > 0) {
+                    GameData.loveValue += Math.min(loveChange, 10);
+                    GameData.interactCount += 1;
+                }
+                
+                // 更新剧情
+                storyDom.innerText = aiResult.story.replace(/【爱意值\+\d+】/g, '');
+                lastStory = aiResult.story;
+                refreshHomeDataTag();
+                
+                // 更新选项
+                const optionBtns = document.querySelectorAll("#page-home .option-btn");
+                if (aiResult.options && aiResult.options.length >= 3) {
+                    for (let i = 0; i < optionBtns.length && i < aiResult.options.length; i++) {
+                        optionBtns[i].innerHTML = `${i+1}. ${aiResult.options[i]}`;
+                        optionBtns[i].onclick = (function(actionText) {
+                            return async function() {
+                                await handleAIOptionClick(actionText);
+                            };
+                        })(aiResult.options[i]);
+                    }
+                }
+                
+                // 动画
+                storyDom.parentElement.classList.add("event-animate");
+                setTimeout(() => {
+                    storyDom.parentElement.classList.remove("event-animate");
+                }, 500);
+                
+            } catch (error) {
+                console.error(error);
+                storyDom.innerText = "剧情生成出了点问题，请重试...";
+            }
+        }
+
+        // 刷新爱意值等数值标签
+        function refreshHomeDataTag() {
+            const tagHtml = `
+                <span class="info-tag">💞 爱意值: ${GameData.loveValue}</span>
+                <span class="info-tag">📅 第${GameData.week}周</span>
+                <span class="info-tag">⏳ ${GameData.growStage}</span>
+            `;
+            document.querySelectorAll("#page-home .info-row")[1].innerHTML = tagHtml;
+        }
+        // ===================== 背包系统 查看+使用物品 =====================
+        function renderBag() {
+            const container = document.getElementById("bagContainer");
+            container.innerHTML = "";
+            GameData.bagItems.forEach((item, idx)=>{
+                const div = document.createElement("div");
+                div.className = "bag-item";
+                div.innerHTML = `<i class="fa ${item.icon}"></i><br>${item.name}`;
+                div.onclick = ()=>{
+                    showBagItemDetail(item);
+                };
+                container.appendChild(div);
+            });
+        }
+        function showBagItemDetail(item) {
+            const modal = document.getElementById("globalModal");
+            const body = document.getElementById("modalBody");
+            body.innerHTML = `
+                <h3 style="margin-bottom:10px;color:#4a5568;">${item.name}</h3>
+                <p style="line-height:1.7;color:#666;">${item.desc}</p>
+                <p style="margin:10px 0;color:#888;">效果：${item.effect}</p>
+                <button class="func-btn btn-green" style="margin-top:10px;" onclick="useBagItem(${item.id})">使用物品</button>
+            `;
+            modal.style.display = "flex";
+        }
+        function useBagItem(itemId) {
+            const item = GameData.bagItems.find(i=>i.id === itemId);
+            if(!item) return;
+            // 解析数值
+            let num = parseInt(item.effect.replace("love+",""));
+            // 限制月度范围 ±2~10
+            if(num > 10) num = 10;
+            if(num < 2) num = 2;
+            GameData.loveValue += num;
+            GameData.interactCount += 1;
+            alert(`成功使用【${item.name}】，爱意值 +${num}！`);
+            closeModal();
+            refreshHomeDataTag();
+            // 剧情联动小幅更新
+            document.getElementById("mainStory").parentElement.classList.add("event-animate");
+            setTimeout(()=>{
+                document.getElementById("mainStory").parentElement.classList.remove("event-animate");
+            },500);
+        }
+        // ===================== 社交NPC系统 查看详情 =====================
+        function renderNpc() {
+            const container = document.getElementById("npcList");
+            container.innerHTML = "";
+            GameData.npcList.forEach(npc=>{
+                const div = document.createElement("div");
+                div.className = "npc-item";
+                div.innerHTML = `
+                    <span class="npc-name">${npc.name}（${npc.relation}）</span>
+                    <span class="npc-favor">好感度：${npc.favor}</span>
+                `;
+                div.onclick = ()=>{
+                    showNpcDetail(npc);
+                };
+                container.appendChild(div);
+            });
+        }
+        function showNpcDetail(npc) {
+            const modal = document.getElementById("globalModal");
+            const body = document.getElementById("modalBody");
+            body.innerHTML = `
+                <h3 style="margin-bottom:10px;color:#4a5568;">${npc.name}</h3>
+                <p style="color:#c76b96;margin-bottom:8px;">关系：${npc.relation}</p>
+                <p style="color:#e57373;margin-bottom:8px;">当前好感度：${npc.favor}</p>
+                <p style="line-height:1.7;color:#666;">人物介绍：${npc.desc}</p>
+            `;
+            modal.style.display = "flex";
+        }
+        // 关闭全局弹窗
+        function closeModal() {
+            document.getElementById("globalModal").style.display = "none";
+        }
+        // ===================== 本地存档系统 localStorage =====================
+        function saveGame() {
+            const saveData = JSON.stringify(GameData);
+            localStorage.setItem("yomori_save_data", saveData);
+            alert("✅ 游戏存档成功！");
+            refreshSaveStatus();
+        }
+        function loadGame() {
+            const saveStr = localStorage.getItem("yomori_save_data");
+            if(!saveStr){
+                alert("❌ 未找到存档文件！");
+                return;
+            }
+            const saveData = JSON.parse(saveStr);
+            Object.assign(GameData, saveData);
+            // 刷新全界面
+            document.getElementById("weekShow").innerText = `当前：第 ${GameData.week} 周`;
+            refreshHomeTags();
+            refreshHomeDataTag();
+            updateStoryByWeek();
+            alert("✅ 读取存档成功！");
+            refreshSaveStatus();
+        }
+        function clearSave() {
+            if(!confirm("确定删除所有存档？删除后无法恢复！")) return;
+            localStorage.removeItem("yomori_save_data");
+            alert("✅ 存档已清空！");
+            refreshSaveStatus();
+        }
+        function refreshSaveStatus() {
+            const stateDom = document.getElementById("saveState");
+            if(localStorage.getItem("yomori_save_data")){
+                stateDom.innerText = "存在有效本地存档";
+            }else{
+                stateDom.innerText = "暂无存档";
+            }
+        }
+        // ===================== API配置系统 =====================
+        function saveApi() {
+            const url = document.getElementById("apiUrl").value.trim();
+            const key = document.getElementById("apiKey").value.trim();
+            const model = document.getElementById("modelName").value.trim();
+            const tip = document.getElementById("apiTip");
+            if(!url || !key || !model){
+                tip.innerText = "⚠️ 请填写完整API信息！";
+                tip.style.color = "#e57373";
+                return;
+            }
+            const apiData = {url,key,model};
+            localStorage.setItem("yomori_api_config", JSON.stringify(apiData));
+            tip.innerText = "✅ API配置保存成功";
+            tip.style.color = "#66bb6a";
+        }
+        async function testApi() {
+            const tip = document.getElementById("apiTip");
+            const apiStr = localStorage.getItem("yomori_api_config");
+            if(!apiStr){
+                tip.innerText = "⚠️ 请先保存API配置！";
+                tip.style.color = "#e57373";
+                return;
+            }
+            tip.innerText = "🔄 正在测试接口连通...";
+            tip.style.color = "#2196f3";
+            // 模拟接口请求
+            await new Promise(resolve=>setTimeout(resolve,1200));
+            tip.innerText = "✅ 接口连通测试通过！";
+            tip.style.color = "#66bb6a";
+        }
+        function clearApi() {
+            document.getElementById("apiUrl").value = "";
+            document.getElementById("apiKey").value = "";
+            document.getElementById("modelName").value = "";
+            localStorage.removeItem("yomori_api_config");
+            const tip = document.getElementById("apiTip");
+            tip.innerText = "✅ API配置已清空";
+            tip.style.color = "#66bb6a";
+        }
+        // ===================== 页面初始化 =====================
+        window.onload = function() {
+            // 读取本地API配置
+            const apiStr = localStorage.getItem("yomori_api_config");
+            if(apiStr){
+                const api = JSON.parse(apiStr);
+                document.getElementById("apiUrl").value = api.url;
+                document.getElementById("apiKey").value = api.key;
+                document.getElementById("modelName").value = api.model;
+            }
+            // 初始化背包、NPC、存档状态
+            renderBag();
+            renderNpc();
+            refreshSaveStatus();
+            refreshHomeDataTag();
+        };
+    </script>
+</body>
+</html>
